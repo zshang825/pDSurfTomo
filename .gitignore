@@ -1,0 +1,21 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+example_test
+
+src_DSurfTomo/DSurfTomo*
+src_pDSurfTomo/pDSurfTomo*
+
+bin/pDSurfTomo*
+bin/DSurfTomo*
+bin/__pycache__/
+
+GUI/UserLastSetting.json
