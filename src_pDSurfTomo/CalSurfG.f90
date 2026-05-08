@@ -1096,16 +1096,13 @@ subroutine CalSurfG(nx, ny, nz, nparpi, vels, iw, rw, col, dsurf, &
     allocate (fdm(0:nvz + 1, 0:nvx + 1))
 
     call date_and_time(values=start_date)
+    
     if (kmaxRc .gt. 0) then
         iwave = 2
         igr = 0
         write (*, "(A)") "Rayleigh wave phase velocity depth kernel"
         call depthkernel(nx, ny, nz, vels, pvRc, sen_vsRc, sen_vpRc, sen_rhoRc, iwave, igr, kmaxRc, tRc, depz, minthk)
     end if
-    call date_and_time(values=end_date)
-    func_name = "CalSurfG depthkernel"
-    call cal_run_time(start_date, end_date, func_name, loop_use_time)
-    call WriteRunTime("CalSurfG depthkernel", loop_use_time)
 
     if (kmaxRg .gt. 0) then
         iwave = 2
@@ -1119,6 +1116,7 @@ subroutine CalSurfG(nx, ny, nz, nparpi, vels, iw, rw, col, dsurf, &
     if (kmaxLc .gt. 0) then
         iwave = 1
         igr = 0
+        write (*, "(A)") "Love wave phase velocity depth kernel"
         call depthkernel(nx, ny, nz, vels, pvLc, sen_vsLc, sen_vpLc, sen_rhoLc, iwave, igr, kmaxLc, tLc, depz, minthk)
     end if
 
@@ -1127,8 +1125,14 @@ subroutine CalSurfG(nx, ny, nz, nparpi, vels, iw, rw, col, dsurf, &
         igr = 0
         call caldespersion(nx, ny, nz, vels, pvLc, iwave, igr, kmaxLg, tLg, depz, minthk)
         igr = 1
+        write (*, "(A)") "Love wave group velocity depth kernel"
         call depthkernel(nx, ny, nz, vels, pvLg, sen_vsLg, sen_vpLg, sen_rhoLg, iwave, igr, kmaxLg, tLg, depz, minthk)
     end if
+
+    call date_and_time(values=end_date)
+    func_name = "CalSurfG depthkernel"
+    call cal_run_time(start_date, end_date, func_name, loop_use_time)
+    call WriteRunTime("CalSurfG depthkernel", loop_use_time)
 
     nar = 0
     count1 = 0
@@ -1476,16 +1480,6 @@ subroutine CalSurfG(nx, ny, nz, nparpi, vels, iw, rw, col, dsurf, &
 
     write (*, '("CalSurfG travel Time:", F10.4)') loop_use_time
     call WriteRunTime("CalSurfG travel", loop_use_time)
-
-    ! write (*, '("CalSurfG travel_total_time: ", F10.3)') travel_total_time
-    ! write (*, '("CalSurfG srtimes_total_time: ", F10.3)') srtimes_total_time
-    ! write (*, '("CalSurfG rpath_total_time: ", F10.3)') rpath_total_time
-    ! write (*, '("CalSurfG Loop_total_time: ", F10.3)') loop_use_time
-
-    ! call WriteRunTime("CalSurfG travel", travel_total_time)
-    ! call WriteRunTime("CalSurfG srtimes", srtimes_total_time)
-    ! call WriteRunTime("CalSurfG rpath", rpath_total_time)
-    ! call WriteRunTime("CalSurfG Loop", loop_use_time)
 
     deallocate (fdm)
     deallocate (velv, veln, ttn, nsts, btg)
@@ -2589,7 +2583,9 @@ subroutine synthetic(nx, ny, nz, nparpi, vels, obst, &
     ALLOCATE (btg(maxbt))
 
     ! allocate(fdm(0:nvz+1, 0:nvx+1))
+
     call date_and_time(values=start_date)
+
     if (kmaxRc .gt. 0) then
         iwave = 2
         igr = 0
@@ -2606,10 +2602,6 @@ subroutine synthetic(nx, ny, nz, nparpi, vels, obst, &
         end do
         close (62)
     end if
-    call date_and_time(values=end_date)
-    func_name = "synthetic caldispersion"
-    call cal_run_time(start_date, end_date, func_name, loop_use_time)
-    call WriteRunTime("synthetic caldispersion", loop_use_time)
 
     if (kmaxRg .gt. 0) then
         iwave = 2
@@ -2657,6 +2649,11 @@ subroutine synthetic(nx, ny, nz, nparpi, vels, obst, &
         end do
         close (62)
     end if
+
+    call date_and_time(values=end_date)
+    func_name = "synthetic caldispersion"
+    call cal_run_time(start_date, end_date, func_name, loop_use_time)
+    call WriteRunTime("synthetic caldispersion", loop_use_time)
 
     ! nar = 0
     count1 = 0
@@ -2916,14 +2913,6 @@ subroutine synthetic(nx, ny, nz, nparpi, vels, obst, &
 
     write (*, '("synthetic travel Time:", F10.4)') loop_use_time
     call WriteRunTime("synthetic travel", travel_total_time)
-
-    ! write (*, '("synthetic travel_total_time = ", F10.3)') travel_total_time
-    ! write (*, '("synthetic srtimes_total_time = ", F10.3)') srtimes_total_time
-    ! write (*, '("synthetic Loop_total_time = ", F10.3)') loop_use_time
-
-    ! call WriteRunTime("synthetic travel", travel_total_time)
-    ! call WriteRunTime("synthetic srtimes", srtimes_total_time)
-    ! call WriteRunTime("synthetic Loop", loop_use_time)
 
     ! deallocate(fdm)
     deallocate (velv, veln, ttn, nsts, btg)

@@ -28,8 +28,8 @@ MODULE ThreadDataMod
         INTEGER ntr
         TYPE(t_backpointer), DIMENSION(:), ALLOCATABLE :: btg
 
-        INTEGER :: nnxb, nnzb, sgs  ! 自己添加
-        REAL(KIND=t_i10) :: dnxb, dnzb, goxb, gozb ! 自己添加
+        INTEGER :: nnxb, nnzb, sgs
+        REAL(KIND=t_i10) :: dnxb, dnzb, goxb, gozb
 
     END TYPE ThreadData
 CONTAINS
@@ -1329,13 +1329,14 @@ subroutine CalSurfG_parallel(nx, ny, nz, nparpi, vels, iw, rw, col, dsurf, &
     kmax3 = kmaxRc + kmaxRg + kmaxLc
 
     allocate(sen_vsRc(nx * ny, kmaxRc, nz), sen_vpRc(nx * ny, kmaxRc, nz), sen_rhoRc(nx * ny, kmaxRc, nz))
-    allocate(sen_vsRg(nx * ny, kmaxRc, nz), sen_vpRg(nx * ny, kmaxRc, nz), sen_rhoRg(nx * ny, kmaxRc, nz))
+    allocate(sen_vsRg(nx * ny, kmaxRg, nz), sen_vpRg(nx * ny, kmaxRg, nz), sen_rhoRg(nx * ny, kmaxRg, nz))
     allocate(sen_vsLc(nx * ny, kmaxLc, nz), sen_vpLc(nx * ny, kmaxLc, nz), sen_rhoLc(nx * ny, kmaxLc, nz))
-    allocate(sen_vsLg(nx * ny, kmaxLc, nz), sen_vpLg(nx * ny, kmaxLc, nz), sen_rhoLg(nx * ny, kmaxLc, nz))
+    allocate(sen_vsLg(nx * ny, kmaxLg, nz), sen_vpLg(nx * ny, kmaxLg, nz), sen_rhoLg(nx * ny, kmaxLg, nz))
     allocate(sen_vs(nx * ny, kmax, nz), sen_vp(nx * ny, kmax, nz), sen_rho(nx * ny, kmax, nz))
     allocate(pvRc(nx * ny, kmax), pvRg(nx * ny, kmax), pvLc(nx * ny, kmax), pvLg(nx * ny, kmax))
     
     call date_and_time(values=start_date)
+
     if (kmaxRc .gt. 0) then
         iwave = 2
         igr = 0
@@ -1346,13 +1347,9 @@ subroutine CalSurfG_parallel(nx, ny, nz, nparpi, vels, iw, rw, col, dsurf, &
                             sen_rhoRc, iwave, igr, kmaxRc, tRc, depz, minthk)
         else
             call depthkernel_parallel(nx, ny, nz, vels, pvRc, sen_vsRc, sen_vpRc, &
-                             sen_rhoRc, iwave, igr, kmaxRc, tRc, depz, minthk)
+                            sen_rhoRc, iwave, igr, kmaxRc, tRc, depz, minthk)
         end if
     end if
-    call date_and_time(values=end_date)
-    func_name = "CalSurfG_parallel depthkernel"
-    call cal_run_time(start_date, end_date, func_name, loop_use_time)
-    call WriteRunTime("CalSurfG_parallel depthkernel", loop_use_time)
 
     if (kmaxRg .gt. 0) then
         iwave = 2
@@ -1360,15 +1357,28 @@ subroutine CalSurfG_parallel(nx, ny, nz, nparpi, vels, iw, rw, col, dsurf, &
         call caldispersion_parallel(nx, ny, nz, vels, pvRc, iwave, igr, kmaxRg, tRg, depz, minthk)
         igr = 1
         write (*, "(A)") "Rayleigh wave group velocity depth kernel"
-        call depthkernel_parallel(nx, ny, nz, vels, pvRg, sen_vsRg, sen_vpRg, &
-                         sen_rhoRg, iwave, igr, kmaxRg, tRg, depz, minthk)
+        if (is_senK_disba) then 
+            call depthkernel_disba(nx, ny, nz, vels, pvRg, sen_vsRg, sen_vpRg, &
+                        sen_rhoRg, iwave, igr, kmaxRg, tRg, depz, minthk)
+        else
+            call depthkernel_parallel(nx, ny, nz, vels, pvRg, sen_vsRg, sen_vpRg, &
+                        sen_rhoRg, iwave, igr, kmaxRg, tRg, depz, minthk)
+        end if
     end if
 
     if (kmaxLc .gt. 0) then
         iwave = 1
         igr = 0
-        call depthkernel_parallel(nx, ny, nz, vels, pvLc, sen_vsLc, sen_vpLc, &
-                         sen_rhoLc, iwave, igr, kmaxLc, tLc, depz, minthk)
+        write (*, "(A)") "Love wave phase velocity depth kernel"
+
+        if (is_senK_disba) then 
+            call depthkernel_disba(nx, ny, nz, vels, pvLc, sen_vsLc, sen_vpLc, &
+                        sen_rhoLc, iwave, igr, kmaxLc, tLc, depz, minthk)
+        else
+            call depthkernel_parallel(nx, ny, nz, vels, pvLc, sen_vsLc, sen_vpLc, &
+                        sen_rhoLc, iwave, igr, kmaxLc, tLc, depz, minthk)
+        end if
+
     end if
 
     if (kmaxLg .gt. 0) then
@@ -1376,9 +1386,21 @@ subroutine CalSurfG_parallel(nx, ny, nz, nparpi, vels, iw, rw, col, dsurf, &
         igr = 0
         call caldispersion_parallel(nx, ny, nz, vels, pvLc, iwave, igr, kmaxLg, tLg, depz, minthk)
         igr = 1
-        call depthkernel_parallel(nx, ny, nz, vels, pvLg, sen_vsLg, sen_vpLg, &
-                         sen_rhoLg, iwave, igr, kmaxLg, tLg, depz, minthk)
+        write (*, "(A)") "Love wave group velocity depth kernel"
+
+        if (is_senK_disba) then 
+            call depthkernel_disba(nx, ny, nz, vels, pvLg, sen_vsLg, sen_vpLg, &
+                        sen_rhoLg, iwave, igr, kmaxLg, tLg, depz, minthk)
+        else
+            call depthkernel_parallel(nx, ny, nz, vels, pvLg, sen_vsLg, sen_vpLg, &
+                        sen_rhoLg, iwave, igr, kmaxLg, tLg, depz, minthk)
+        end if
     end if
+    
+    call date_and_time(values=end_date)
+    func_name = "CalSurfG_parallel depthkernel"
+    call cal_run_time(start_date, end_date, func_name, loop_use_time)
+    call WriteRunTime("CalSurfG_parallel depthkernel", loop_use_time)
 
     loop_total_Num = sum(nsrcsurf1(1:kmax))
     allocate (knumi_list(loop_total_Num), STAT=t_checkstat)
@@ -2933,6 +2955,7 @@ subroutine synthetic_parallel(nx, ny, nz, nparpi, vels, obst, &
     g_td%rbint = 0
 
     call date_and_time(values=start_date)
+
     if (kmaxRc .gt. 0) then
         iwave = 2
         igr = 0
@@ -2949,10 +2972,6 @@ subroutine synthetic_parallel(nx, ny, nz, nparpi, vels, obst, &
         end do
         close (62)
     end if
-    call date_and_time(values=end_date)
-    func_name = "synthetic_parallel caldispersion"
-    call cal_run_time(start_date, end_date, func_name, loop_use_time)
-    call WriteRunTime("synthetic_parallel caldispersion", loop_use_time)
 
     if (kmaxRg .gt. 0) then
         iwave = 2
@@ -3000,6 +3019,11 @@ subroutine synthetic_parallel(nx, ny, nz, nparpi, vels, obst, &
         end do
         close (62)
     end if
+
+    call date_and_time(values=end_date)
+    func_name = "synthetic_parallel caldispersion"
+    call cal_run_time(start_date, end_date, func_name, loop_use_time)
+    call WriteRunTime("synthetic_parallel caldispersion", loop_use_time)
 
     ! nar = 0
     count1 = 0
@@ -3244,7 +3268,6 @@ subroutine synthetic_parallel(nx, ny, nz, nparpi, vels, obst, &
             CALL travel_parallel(x, z, urg, td)
         END IF
 
-
         count1 = 0
         do istep = 1, nrc1(srcnum, knumi)
             CALL srtimes_parallel(x, z, rcxf(istep, srcnum, knumi), rczf(istep, srcnum, knumi), cbst1, td)
@@ -3272,7 +3295,6 @@ subroutine synthetic_parallel(nx, ny, nz, nparpi, vels, obst, &
     write (*, '("synthetic_parallel travel Time:", F10.4)') loop_use_time
     call WriteRunTime("synthetic_parallel travel", loop_use_time)
     
-
     deallocate (knumi_list, srcnum_list, all_count, STAT=t_checkstat)
     call free_thread_data(g_td)
     call free_jagged_array(all_cbst)
